@@ -4,12 +4,15 @@ import re
 import csv
 import time
 import os
-from ddgs import DDGS
+
+try:
+    from ddgs import DDGS
+except ImportError:
+    from duckduckgo_search import DDGS
 
 API_KEY = os.environ.get("SERPER_API_KEY", "")
 SERPER_URL = "https://google.serper.dev/search"
 
-# Exclude generic main pages, group landing pages, contact pages, profile pages
 EXCLUDED_DOMAINS = [
     "google.com", "google.co.in", "translate.google.com", "icloud.com",
     "web.whatsapp.com", "play.google.com", "wikipedia.org", "apple.com",
@@ -77,32 +80,25 @@ def is_valid_listing(item):
     full_text = f"{title} {snippet}".lower()
     link_lower = link.lower()
 
-    # Must contain valid +91 phone number
     phone = clean_phone(full_text)
     if not phone:
         return False
 
-    # Exclude foreign locations
     if any(fl.lower() in full_text for fl in FOREIGN_LOCATIONS):
         return False
 
-    # Exclude system/utility URLs & foreign aggregators
     if any(domain in link_lower for domain in EXCLUDED_DOMAINS):
         return False
 
-    # Exclude blog / advice articles / group landing pages / generic contact pages
     if any(pattern in link_lower for pattern in EXCLUDED_URL_PATTERNS):
         return False
 
-    # Reject generic Facebook group landing pages without specific post ID
     if "facebook.com/groups/" in link_lower and "/posts/" not in link_lower:
         return False
 
-    # Reject generic page URLs without posts or reels or listing paths
     if link_lower.rstrip("/").endswith("facebook.com/hotelsforlease") or link_lower.rstrip("/").endswith("thetakeover.in"):
         return False
 
-    # Must explicitly indicate sale / takeover / partnership / investment
     sale_indicators = ["for sale", "takeover", "on sale", "sale in", "partner", "buy", "investment", "running salon", "running restaurant", "running spa", "running cafe"]
     if not any(ind in full_text for ind in sale_indicators):
         return False
@@ -232,7 +228,7 @@ def main():
     for idx, q in enumerate(SEARCH_QUERIES):
         print(f"[{idx+1}/{len(SEARCH_QUERIES)}] Query: {q}")
         results = search_web(q, num=10)
-        time.sleep(4)  # 4s delay between requests
+        time.sleep(4)
         for r in results:
             link = r.get('link', '') or r.get('href', '')
             if link and link not in seen_links and is_valid_listing(r):
@@ -242,6 +238,8 @@ def main():
     print(f"Total verified unique Indian acquisition listings with phone numbers: {len(all_raw_results)}")
 
     structured_listings = []
+    seen_phones = set()
+    seen_names = set()
 
     for item in all_raw_results:
         title = item.get('title', '')
@@ -257,12 +255,16 @@ def main():
         reason = extract_reason(full_text)
         platform = extract_platform_name(link)
 
-        # Clean Title
         clean_title = title.split("-")[0].split("|")[0].split(":")[0].strip()
         if clean_title.lower() in ["contact", "home", "about us", "view", "details"]:
             clean_title = f"Running {category} in {city}"
         if len(clean_title) > 60 or not clean_title or "http" in clean_title.lower():
             clean_title = f"Running {category} for Sale / Takeover"
+
+        if phone in seen_phones or clean_title.lower() in seen_names:
+            continue
+        seen_phones.add(phone)
+        seen_names.add(clean_title.lower())
 
         name_cat = f"{clean_title} ({category})"
 
