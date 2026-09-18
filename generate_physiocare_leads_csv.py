@@ -12,10 +12,13 @@ def generate_csv():
         "Email Address (if available)",
         "Website / Source Profile Link",
         "Current Setup / Infrastructure Notes",
-        "Franchise Partnership Pitch Suitability & Priority Status"
+        "Franchise Partnership Pitch Suitability & Priority Status",
+        "Co-Branding Intent Score",
+        "Opportunity Type",
+        "Co-Branding Pitch Angle"
     ]
 
-    filename = "Nonstop_PhysioCare_Franchise_Leads_Expanded_Sept15.csv"
+    filename = "PhysioCare_CoBranding_Partnership_Leads.csv"
 
     with open(filename, mode='w', newline='', encoding='utf-8') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)

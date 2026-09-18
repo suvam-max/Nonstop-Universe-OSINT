@@ -18,11 +18,13 @@ def generate_csv():
         "Images / Google Drive Link",
         "Key Observations & Recommendations",
         "Priority & Follow-up Status",
-        "Remarks"
+        "Remarks",
+        "Co-Branding Intent Score",
+        "Opportunity Type",
+        "Co-Branding Pitch Angle"
     ]
 
-    # Save to Business_Acquisition_Tracker_Sept15.csv
-    filename = "Business_Acquisition_Tracker_Sept15.csv"
+    filename = "Business_CoBranding_Acquisition_Tracker.csv"
 
     with open(filename, mode='w', newline='', encoding='utf-8') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
