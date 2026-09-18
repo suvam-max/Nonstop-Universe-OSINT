@@ -4,13 +4,12 @@ import re
 import csv
 import time
 import os
+from urllib.parse import urlparse
 
 try:
     from ddgs import DDGS
 except ImportError:
     from duckduckgo_search import DDGS
-
-from urllib.parse import urlparse
 
 API_KEY = os.environ.get("SERPER_API_KEY", "")
 SERPER_URL = "https://google.serper.dev/search"
@@ -90,7 +89,7 @@ def is_valid_lead(item):
     if any(domain in link_lower for domain in EXCLUDED_DOMAINS):
         return False
 
-    lead_keywords = ["physio", "physiotherapy", "gym", "fitness", "rehab", "wellness", "orthopedic", "chiropractic", "yoga", "pilates", "sports"]
+    lead_keywords = ["physio", "physiotherapy", "gym", "fitness", "rehab", "wellness", "orthopedic", "chiropractic", "yoga", "pilates", "sports", "clinic", "center", "centre", "space"]
     if not any(kw in full_text for kw in lead_keywords):
         return False
 
@@ -155,6 +154,37 @@ def extract_clean_business_name(title, link, category):
             clean_name = f"Premium {category} Facility"
     return clean_name
 
+def extract_cobranding_intent_score(text):
+    text_l = text.lower()
+    high_keywords = ["co-brand", "cobrand", "space share", "space sharing", "franchise", "partnership", "joint venture", "collaboration", "takeover", "part time doctor"]
+    med_keywords = ["partner", "expansion", "investor", "clinic share", "associate", "setup", "branch"]
+    if any(kw in text_l for kw in high_keywords):
+        return "High"
+    elif any(kw in text_l for kw in med_keywords):
+        return "Medium"
+    return "Medium"
+
+def extract_opportunity_type(text):
+    text_l = text.lower()
+    if "space share" in text_l or "space sharing" in text_l or "rent" in text_l or "cabin" in text_l:
+        return "Space Sharing / Cabin Partnership"
+    elif "franchise" in text_l or "co-brand" in text_l or "cobrand" in text_l:
+        return "Co-Branding / Franchise Integration"
+    elif "joint venture" in text_l or "jv" in text_l or "investment" in text_l:
+        return "Joint Venture / Equity Partnership"
+    elif "takeover" in text_l or "sale" in text_l:
+        return "Franchise Takeover / Acquisition"
+    return "Co-Branding & Clinic Expansion Partnership"
+
+def extract_cobranding_pitch_angle(category, city):
+    if "Physiotherapy" in category:
+        return f"Existing physiotherapy setup in {city} ideal for Nonstop PhysioCare co-branding, tech integration, and extended patient inflow."
+    elif "Gym" in category:
+        return f"High footfall fitness facility in {city} suitable for in-house PhysioCare rehab wing / clinic space integration."
+    elif "Wellness" in category:
+        return f"Established wellness center in {city} offers complementary synergy for joint PhysioCare co-branding."
+    return f"Prime location setup in {city} optimal for co-branding, revenue sharing, and rehab services expansion."
+
 SEARCH_QUERIES = [
     'physiotherapy clinic contact +91 Delhi NCR',
     'physiotherapy clinic contact +91 Mumbai',
@@ -186,13 +216,53 @@ SEARCH_QUERIES = [
     'pilates studio fitness contact +91 India',
     'spine and joint clinic contact +91 India',
     'sports medicine clinic contact +91 India',
+    'physiotherapy clinic space available for rent contact +91',
+    'clinic space sharing doctor Hyderabad contact +91',
+    'clinic space sharing doctor Mumbai contact +91',
+    'clinic space sharing doctor Bangalore contact +91',
+    'clinic space sharing doctor Delhi contact +91',
+    'doctor clinic space for rent sharing Pune +91',
+    'doctor clinic space for rent sharing Chennai +91',
+    'gym space sharing physiotherapy India contact +91',
+    'wellness clinic partnership joint venture India contact +91',
+    'wellness space co-working clinic India +91',
+    'physiotherapist wanted clinic partnership +91',
+    'rehabilitation clinic partnership franchise +91',
+    'gym physiotherapy partnership collaboration +91',
+    'sports clinic doctors space available +91',
+    'polyclinic space sharing doctor +91',
+    'ayurveda panchkarma wellness center contact +91',
+    'crossfit studio fitness center contact +91',
+    'physiotherapy clinic Noida contact +91',
+    'physiotherapy clinic Gurgaon contact +91',
+    'physiotherapy clinic Thane contact +91',
+    'physiotherapy clinic Navi Mumbai contact +91',
+    'physiotherapy clinic Coimbatore contact +91',
+    'physiotherapy clinic Vadodara contact +91',
+    'physiotherapy clinic Visakhapatnam contact +91',
+    'physiotherapy clinic Surat contact +91',
+    'physiotherapy clinic Nagpur contact +91',
+    'gym fitness center Noida contact +91',
+    'gym fitness center Gurgaon contact +91',
+    'gym fitness center Thane contact +91',
+    'gym fitness center Navi Mumbai contact +91',
+    'sports rehab center Hyderabad contact +91',
+    'sports rehab center Bangalore contact +91',
+    'sports rehab center Mumbai contact +91',
+    'sports rehab center Delhi contact +91',
     'site:facebook.com "physiotherapy clinic" "+91"',
     'site:facebook.com "gym" "+91" "contact"',
     'site:facebook.com "fitness center" "+91" "contact"',
     'site:facebook.com "rehab center" "+91"',
+    'site:facebook.com "clinic space" "+91"',
+    'site:facebook.com "co-branding" "+91"',
+    'site:facebook.com "space sharing" clinic "+91"',
+    'site:facebook.com "franchise partnership" "+91"',
+    'site:facebook.com "joint venture" clinic "+91"',
     'site:instagram.com "physiotherapy clinic" "+91"',
     'site:instagram.com "fitness center" "+91" India',
     'site:instagram.com "rehabilitation center" "+91"',
+    'site:instagram.com "clinic space" "+91"',
     'site:justdial.com "physiotherapy clinics" "+91"',
     'site:justdial.com "gyms" "+91"'
 ]
@@ -201,11 +271,10 @@ def main():
     all_raw_results = []
     seen_links = set()
 
-    print("Executing OSINT extraction for Nonstop PhysioCare franchise targets...")
+    print("Executing OSINT extraction for Nonstop PhysioCare co-branding targets...")
     for idx, q in enumerate(SEARCH_QUERIES):
         print(f"[{idx+1}/{len(SEARCH_QUERIES)}] Query: {q}")
         results = search_web(q, num=10)
-        time.sleep(4)
         for r in results:
             link = r.get('link', '') or r.get('href', '')
             if link and link not in seen_links and is_valid_lead(r):
@@ -236,6 +305,10 @@ def main():
         seen_phones.add(phone)
         seen_names.add(clean_name.lower())
 
+        intent_score = extract_cobranding_intent_score(full_text)
+        opportunity_type = extract_opportunity_type(full_text)
+        pitch_angle = extract_cobranding_pitch_angle(category, city)
+
         name_cat = f"{clean_name} ({category})"
 
         record = {
@@ -246,7 +319,10 @@ def main():
             "Email Address (if available)": email,
             "Website / Source Profile Link": link,
             "Current Setup / Infrastructure Notes": "Operational clinic/gym facility (suitable for 900–1500+ sq ft integration) with existing wellness clientele and rehab infrastructure",
-            "Franchise Partnership Pitch Suitability & Priority Status": "High Priority - Ideal candidate for Nonstop PhysioCare franchise/co-branding integration"
+            "Franchise Partnership Pitch Suitability & Priority Status": "High Priority - Ideal candidate for Nonstop PhysioCare franchise/co-branding integration",
+            "Co-Branding Intent Score": intent_score,
+            "Opportunity Type": opportunity_type,
+            "Co-Branding Pitch Angle": pitch_angle
         }
 
         structured_leads.append(record)
