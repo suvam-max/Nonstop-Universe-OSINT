@@ -99,7 +99,7 @@ def is_valid_listing(item):
     if link_lower.rstrip("/").endswith("facebook.com/hotelsforlease") or link_lower.rstrip("/").endswith("thetakeover.in"):
         return False
 
-    sale_indicators = ["for sale", "takeover", "on sale", "sale in", "partner", "buy", "investment", "running salon", "running restaurant", "running spa", "running cafe", "co-branding", "cobrand", "franchise", "joint venture", "space sharing"]
+    sale_indicators = ["for sale", "takeover", "on sale", "sale in", "partner", "buy", "investment", "running salon", "running restaurant", "running spa", "running cafe"]
     if not any(ind in full_text for ind in sale_indicators):
         return False
 
@@ -162,15 +162,7 @@ def extract_property_size(text):
 
 def extract_reason(text):
     text_l = text.lower()
-    if "co-brand" in text_l or "cobrand" in text_l or "brand collaboration" in text_l:
-        return "Brand Collaboration & Strategic Co-Branding"
-    elif "space share" in text_l or "space sharing" in text_l:
-        return "Commercial Space Sharing & Rent Optimization"
-    elif "franchise" in text_l:
-        return "Franchise Expansion & Co-Branding"
-    elif "joint venture" in text_l or "jv" in text_l:
-        return "Joint Venture Partnership"
-    elif "migrat" in text_l or "moving out" in text_l or "abroad" in text_l:
+    if "migrat" in text_l or "moving out" in text_l or "abroad" in text_l:
         return "Owner migrating abroad / relocating"
     elif "partner" in text_l or "dispute" in text_l or "split" in text_l:
         return "Partnership split / seeking active investor"
@@ -203,68 +195,36 @@ def extract_platform_name(link):
         return "Quikr Business"
     return "Direct Business Listing"
 
-def extract_cobranding_intent_score(text):
-    text_l = text.lower()
-    if any(kw in text_l for kw in ["co-brand", "cobrand", "space share", "franchise partnership", "joint venture", "brand collaboration"]):
-        return "High"
-    elif any(kw in text_l for kw in ["partner", "investment", "takeover", "expansion", "franchise"]):
-        return "Medium"
-    return "Medium"
-
-def extract_opportunity_type(text):
-    text_l = text.lower()
-    if "co-brand" in text_l or "cobrand" in text_l or "collaboration" in text_l:
-        return "Co-Branding Collaboration"
-    elif "space share" in text_l or "space sharing" in text_l:
-        return "Commercial Space Sharing"
-    elif "franchise" in text_l:
-        return "Franchise Partnership / Expansion"
-    elif "joint venture" in text_l or "jv" in text_l:
-        return "Joint Venture Equity"
-    elif "takeover" in text_l or "sale" in text_l:
-        return "Franchise Takeover"
-    return "Co-Branding & Partnership Opportunity"
-
-def extract_cobranding_pitch_angle(category, city):
-    return f"Prime operational commercial setup in {city} for brand co-branding, footfall sharing, and joint service offerings."
-
 SEARCH_QUERIES = [
-    'site:instagram.com/reel "for sale" salon India',
-    'site:instagram.com/reel "for sale" restaurant India',
-    'site:instagram.com/reel "for sale" cafe India',
-    'site:instagram.com/reel "for sale" spa India',
-    'site:instagram.com/reel "for sale" gym India',
-    'site:instagram.com/reel "for sale" Bangalore',
-    'site:instagram.com/reel "for sale" Hyderabad',
-    'site:instagram.com/reel "for sale" Mumbai',
-    'site:instagram.com/reel "for sale" Delhi',
-    'site:facebook.com "salon for sale" "+91"',
-    'site:facebook.com "restaurant for sale" "+91"',
-    'site:facebook.com "cafe for sale" "+91"',
-    'site:facebook.com "spa for sale" "+91"',
-    'site:facebook.com "running restaurant for sale" Bangalore',
-    'site:youtube.com/shorts "salon for sale" India',
-    'site:youtube.com/shorts "restaurant for sale" India',
-    'site:youtube.com/shorts "cafe for sale" India',
-    'running salon for sale Bangalore contact',
-    'running restaurant for sale Bangalore contact',
-    'running cafe for sale Bangalore contact',
-    'running spa for sale Hyderabad contact',
-    'salon for sale India',
-    'restaurant for sale India',
-    'spa for sale India',
-    'cafe for sale India',
-    'co-branding available salon restaurant cafe contact +91',
-    'franchise partnership business opportunity contact +91 India',
-    'joint venture partner salon spa restaurant contact +91',
-    'space sharing commercial space clinic cafe contact +91'
+    'running salon for sale India contact +91',
+    'running salon for takeover India contact +91',
+    'running restaurant for sale India contact +91',
+    'running restaurant for takeover India contact +91',
+    'running spa for sale India contact +91',
+    'running cafe for takeover India contact +91',
+    'unisex salon for sale India contact +91',
+    'beauty salon for sale India contact +91',
+    'site:facebook.com/posts "salon for sale" "+91"',
+    'site:facebook.com/posts "restaurant for sale" "+91"',
+    'site:facebook.com/posts "spa for sale" "+91"',
+    'site:youtube.com/shorts "salon for sale" "+91"',
+    'site:youtube.com/shorts "restaurant for sale" "+91"',
+    'salon for sale Mumbai contact +91',
+    'salon for sale Delhi contact +91',
+    'restaurant for sale Bangalore contact +91',
+    'restaurant for sale Hyderabad contact +91',
+    'spa for sale Pune contact +91',
+    'salon for sale Gurgaon contact +91',
+    'restaurant for sale Pune contact +91',
+    'running cafe for sale Delhi contact +91',
+    'spa for sale Mumbai contact +91'
 ]
 
 def main():
     all_raw_results = []
     seen_links = set()
 
-    print("Fetching co-branding business listings via OSINT search engines...")
+    print("Fetching listings via OSINT search engines...")
     for idx, q in enumerate(SEARCH_QUERIES):
         print(f"[{idx+1}/{len(SEARCH_QUERIES)}] Query: {q}")
         results = search_web(q, num=10)
@@ -295,10 +255,6 @@ def main():
         reason = extract_reason(full_text)
         platform = extract_platform_name(link)
 
-        intent_score = extract_cobranding_intent_score(full_text)
-        opportunity_type = extract_opportunity_type(full_text)
-        pitch_angle = extract_cobranding_pitch_angle(category, city)
-
         clean_title = title.split("-")[0].split("|")[0].split(":")[0].strip()
         if clean_title.lower() in ["contact", "home", "about us", "view", "details"]:
             clean_title = f"Running {category} in {city}"
@@ -326,10 +282,7 @@ def main():
             "Images / Google Drive Link": link,
             "Key Observations & Recommendations": f"Active business acquisition opportunity in {city}. Verified contact details available.",
             "Priority & Follow-up Status": "High Priority - Verified Phone Available",
-            "Remarks": f"Source: {platform}. Public OSINT listing.",
-            "Co-Branding Intent Score": intent_score,
-            "Opportunity Type": opportunity_type,
-            "Co-Branding Pitch Angle": pitch_angle
+            "Remarks": f"Source: {platform}. Public OSINT listing."
         }
 
         structured_listings.append(record)
